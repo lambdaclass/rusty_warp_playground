@@ -31,9 +31,7 @@ mod filters {
         warp::path!(String).map(move |shortened_url: String| {
             println!("url: {}", shortened_url);
             let new_url = match (*db).lock().unwrap().get(shortened_url) {
-                Ok(Some(value)) => {
-                    std::str::from_utf8(&value[..]).unwrap().to_string()
-                }
+                Ok(Some(value)) => std::str::from_utf8(&value[..]).unwrap().to_string(),
                 _ => "did not find".to_string(),
             };
 
