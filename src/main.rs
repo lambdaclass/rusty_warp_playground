@@ -1,8 +1,8 @@
 mod urlcreation;
 
-use rocksdb::{DB, Options};
-use warp::{Filter, http::Uri};
+use rocksdb::{Options, DB};
 use std::sync::{Arc, Mutex};
+use warp::{http::Uri, Filter};
 
 use std::str::FromStr;
 
@@ -23,27 +23,22 @@ async fn main() {
 mod filters {
     use super::*;
 
-    pub fn endpoints(
-        db: Arc<Mutex<DB>>
-    ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+    pub fn endpoints(db: Arc<Mutex<DB>>) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
         shortened_url(db.clone())
     }
 
-    pub fn shortened_url(
-        db: Arc<Mutex<DB>>
-    ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
-        warp::path!(String)
-            .map(move |shortened_url: String| {
-                println!("url: {}", shortened_url);
-                let new_url = match (*db).lock().unwrap().get(shortened_url) {
-                    Ok(Some(value)) => {
-                        format!("{}", std::str::from_utf8(&value[..]).unwrap())
-                    }
-                    _ => format!("did not find")
-                };
+    pub fn shortened_url(db: Arc<Mutex<DB>>) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+        warp::path!(String).map(move |shortened_url: String| {
+            println!("url: {}", shortened_url);
+            let new_url = match (*db).lock().unwrap().get(shortened_url) {
+                Ok(Some(value)) => {
+                    std::str::from_utf8(&value[..]).unwrap().to_string()
+                }
+                _ => "did not find".to_string(),
+            };
 
-                let location = Uri::from_str(&format!("{}", new_url)).unwrap();
-                warp::redirect(location)
-            })
+            let location = Uri::from_str(&new_url).unwrap();
+            warp::redirect(location)
+        })
     }
 }
